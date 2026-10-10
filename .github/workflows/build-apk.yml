@@ -1,0 +1,150 @@
+name: Generar APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - .github/workflows/build-apk.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Crear el proyecto de Android
+        run: |
+          mkdir www
+          cp index.html www/
+          npm init -y
+          npm i @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/local-notifications@7
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.granjas.pedidosinsumos",
+            "appName": "Pedidos de insumos",
+            "webDir": "www",
+            "android": { "adjustMarginsForEdgeToEdge": "force" },
+            "plugins": {
+              "LocalNotifications": { "smallIcon": "ic_stat_icon", "iconColor": "#143A5C" }
+            }
+          }
+          JSON
+          npx cap add android
+
+      - name: Permisos, ícono y colores
+        run: |
+          pip install -q pillow || pip install -q --break-system-packages pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw
+
+          RES = 'android/app/src/main/res'
+
+          # 1) Permisos de avisos y alarmas
+          mf = 'android/app/src/main/AndroidManifest.xml'
+          s = open(mf, encoding='utf-8').read()
+          perms = ['POST_NOTIFICATIONS', 'VIBRATE', 'USE_EXACT_ALARM', 'RECEIVE_BOOT_COMPLETED', 'WAKE_LOCK']
+          add = ''.join('    <uses-permission android:name="android.permission.%s" />\n' % p for p in perms)
+          add += '    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />\n'
+          s = s.replace('</manifest>', add + '</manifest>')
+          open(mf, 'w', encoding='utf-8').write(s)
+
+          # 2) Color de fondo del ícono
+          open(RES + '/values/ic_launcher_background.xml', 'w', encoding='utf-8').write(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#143A5C</color>\n</resources>\n')
+
+          # 3) Íconos (huevo ámbar sobre azul marino)
+          NAVY = (20, 58, 92, 255)
+          AMBER = (209, 154, 42, 255)
+          WHITE = (255, 255, 255, 255)
+
+          def egg(size, color, scale, cy=0.52):
+              import math
+              k = 4
+              S = size * k
+              im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              w = S * scale
+              h = w * 1.28
+              pts = []
+              for i in range(361):
+                  t = math.pi * i / 360.0
+                  half = (w / 2) * math.sin(t) * (1 - 0.2 * math.cos(t))
+                  y = S * cy - (h / 2) * math.cos(t)
+                  pts.append((S / 2 - half, y))
+              for i in range(360, -1, -1):
+                  t = math.pi * i / 360.0
+                  half = (w / 2) * math.sin(t) * (1 - 0.2 * math.cos(t))
+                  y = S * cy - (h / 2) * math.cos(t)
+                  pts.append((S / 2 + half, y))
+              d.polygon(pts, fill=color)
+              return im.resize((size, size), Image.LANCZOS)
+
+          def legacy(size, round_):
+              k = 4
+              S = size * k
+              im = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+              d = ImageDraw.Draw(im)
+              if round_:
+                  d.ellipse([0, 0, S - 1, S - 1], fill=NAVY)
+              else:
+                  d.rounded_rectangle([0, 0, S - 1, S - 1], radius=int(S * 0.22), fill=NAVY)
+              im = im.resize((size, size), Image.LANCZOS)
+              im.alpha_composite(egg(size, AMBER, 0.46))
+              return im
+
+          dens = {'mdpi': (48, 108, 24), 'hdpi': (72, 162, 36), 'xhdpi': (96, 216, 48),
+                  'xxhdpi': (144, 324, 72), 'xxxhdpi': (192, 432, 96)}
+          import os
+          for name, (ic, fg, st) in dens.items():
+              d = RES + '/mipmap-' + name
+              legacy(ic, False).save(d + '/ic_launcher.png')
+              legacy(ic, True).save(d + '/ic_launcher_round.png')
+              egg(fg, AMBER, 0.30).save(d + '/ic_launcher_foreground.png')
+              os.makedirs(RES + '/drawable-' + name, exist_ok=True)
+              egg(st, WHITE, 0.62).save(RES + '/drawable-' + name + '/ic_stat_icon.png')
+          print('íconos y permisos listos')
+          PY
+
+      - name: Sincronizar la app
+        run: npx cap sync android
+
+      - name: Conservar la llave de firma entre compilaciones
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: llave-firma-v1
+
+      - name: Compilar la APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Preparar el archivo
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk pedidos-insumos.apk
+
+      - name: Publicar la APK para descargarla
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: Pedidos de insumos (compilación ${{ github.run_number }})
+          body: Descarga pedidos-insumos.apk e instálala en el celular.
+          files: pedidos-insumos.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pedidos-insumos-apk
+          path: pedidos-insumos.apk
