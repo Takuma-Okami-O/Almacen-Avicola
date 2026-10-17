@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#143A5C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pedidos">
 <title>Pedidos de insumos</title>
 <style>
 :root{--g9:#0A1F33;--g8:#143A5C;--g6:#2D6E9E;--g1:#E4EEF6;--straw:#D19A2A;--straw-d:#6F4B0A;--bg:#F1F4F8;--ink:#14202C;--mute:#5B6877;--line:#D9E0E8;--red:#B3402F}
@@ -216,7 +222,20 @@ body{background:var(--bg);overscroll-behavior:none}
 .credit{padding-bottom:calc(9px + env(safe-area-inset-bottom,0px))}
 .dbtn.disabled,.row.disabled{opacity:.45;cursor:not-allowed}
 .remcard span{display:block;margin-top:2px;line-height:1.35}
-.step .qin{width:54px}
+.step .qin{width:58px}
+.cats{max-height:190px;overflow-y:auto;border:1.5px solid var(--line);border-radius:12px;margin-bottom:10px}
+.crow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-bottom:1px solid #EDF0F4;cursor:pointer;user-select:none;-webkit-user-select:none}
+.crow:last-child{border-bottom:0}
+.crow .cn{flex:1;min-width:0;font-weight:700;font-size:14px}
+.crow .cc{font-size:12.5px;color:var(--mute);white-space:nowrap}
+.crow .chk2{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:800}
+.crow.all .chk2{background:var(--g8);border-color:var(--g8)}
+.crow.some .chk2{background:var(--straw);border-color:var(--straw)}
+.crow.f{background:#F2F7FB}
+.crow .lnk{padding:2px 4px;font-size:12.5px}
+.ioshint{background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.4;text-align:left}
+.ioshint b{display:block;margin-bottom:2px}
+#toast{bottom:calc(112px + env(safe-area-inset-bottom,0px));cursor:pointer}
 .missed{margin:0 14px 10px;background:#FFF4DB;border:1.5px solid var(--straw);border-radius:12px;padding:10px 12px}
 .missed b{display:block;font-size:13px;color:var(--straw-d)}
 .missed span{display:block;font-size:14px;font-weight:600;margin:3px 0 8px;line-height:1.35}
@@ -324,7 +343,7 @@ const UI={
 const ico=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${UI[k]||ICONS.box}</svg>`;
 const CATSTYLE={'Limpieza':['#DDEAF4','#143A5C'],'Higiene personal':['#F6E9C9','#8A6414'],'Bioseguridad':['#D8EEEC','#1F6B66'],'Dotación':['#EBE3DA','#6B5440']};
 function thumb(p){
-  if(p.img) return `<div class="th"><img src="${p.img}" alt=""></div>`;
+  if(p.img) return `<div class="th"><img src="${p.img}" alt="" loading="lazy" decoding="async"></div>`;
   const c=CATSTYLE[p.cat]||['#E7EAE6','#3C4A41'];
   return `<div class="th" style="background:${c[0]};color:${c[1]}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[p.icon]||ICONS.box}</svg></div>`;
 }
@@ -334,6 +353,8 @@ const dLabel=d=>d.kind==='nucleo'?'Núcleo '+d.num:d.name;
 /* ---------- Configuración ---------- */
 const SUPABASE_URL='https://gomzhxzzqtnzygmeldvp.supabase.co';
 const SUPABASE_KEY='sb_publishable_oWyB26D6NfFxTIpEZQLxiQ_ddcxpmpG';
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+const STANDALONE=window.navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches);
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 const uid=()=>{
   if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();
@@ -351,11 +372,11 @@ const sbUser=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSessi
 const sbAdmin=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:true,storageKey:'pi-staff'}});
 
 /* ---------- Estado ---------- */
-const EMPTY=()=>({products:[],dests:[],recs:{},reminders:[]});
+const EMPTY=()=>({products:[],dests:[],recs:{},vis:{},visCats:{},reminders:[]});
 const saved=LS.get('farm',null),cached=LS.get('catalog',null);
 const phone={online:navigator.onLine,catalog:cached?cached.cat:EMPTY(),catVer:cached?cached.ver:0,session:null,step:saved?'home':'code',
-  farmId:saved?saved.id:null,farmName:saved?saved.name:'',tab:'inv',q:'',cat:'Todos',orders:LS.get('orders',{}),notes:LS.get('notes',{}),who:LS.get('who',''),whoLocked:LS.get('whoLocked',false),whoDraft:''};
-const adm={tab:'prod',q:'',cat:'Todos',recDest:null};
+  farmId:saved?saved.id:null,farmName:saved?saved.name:'',tab:'inv',q:'',cat:'Todos',orders:LS.get('orders',{}),notes:LS.get('notes',{}),lim:150,who:LS.get('who',''),whoLocked:LS.get('whoLocked',false),whoDraft:''};
+const adm={tab:'prod',q:'',cat:'Todos',recDest:null,lim:150};
 const A={farm:null,version:0,dirty:false,dirtyNote:'',err:'',saving:false,mustChange:false,code:'',devices:[],shadow:null,shadowJson:''};
 let D=EMPTY();
 let sh=null;
@@ -363,23 +384,102 @@ let sh=null;
 /* ---------- Conversión base de datos <-> pantalla ---------- */
 const imgUrl=p=>!p?null:/^https?:/i.test(p)?p:`${SUPABASE_URL}/storage/v1/object/public/product-images/${p}`;
 const byDest=(a,b)=>a.kind===b.kind?dLabel(a).localeCompare(dLabel(b),'es',{numeric:true}):(a.kind==='nucleo'?-1:1);
-function draftFromDb(prods,dests,sugs,rems){
-  const recs={};sugs.forEach(s=>{(recs[s.destination_id]=recs[s.destination_id]||{})[s.product_id]=s.qty});
+function draftFromDb(prods,dests,sugs,rems,viss,vcats){
+  const recs={};sugs.forEach(s=>{(recs[s.destination_id]=recs[s.destination_id]||{})[s.product_id]=Number(s.qty)});
+  const vis={};(viss||[]).forEach(v=>{(vis[v.destination_id]=vis[v.destination_id]||{})[v.product_id]=v.allow!==false});
+  const visCats={};(vcats||[]).forEach(c=>{(visCats[c.destination_id]=visCats[c.destination_id]||[]).push(c.category)});
   return{
     products:prods.map(r=>({id:r.id,code:r.code,name:r.name,cat:r.category,unit:r.unit,icon:r.icon||'box',imgPath:r.image_path,img:imgUrl(r.image_path),active:r.active})),
-    dests:dests.map(r=>({id:r.id,kind:r.kind,num:r.num,name:r.name})).sort(byDest),
-    recs,
+    dests:dests.map(r=>({id:r.id,kind:r.kind,num:r.num,name:r.name,restricted:!!r.restricted})).sort(byDest),
+    recs,vis,visCats,
     reminders:rems.map(r=>({id:r.id,text:r.message,days:r.days,times:(r.times||[]).map(t=>String(t).slice(0,5)),active:r.active}))
   };
 }
 function catalogFromSnap(d){
-  const recs={};(d.suggestions||[]).forEach(s=>{(recs[s.destination_id]=recs[s.destination_id]||{})[s.product_id]=s.qty});
+  const recs={};(d.suggestions||[]).forEach(s=>{(recs[s.destination_id]=recs[s.destination_id]||{})[s.product_id]=Number(s.qty)});
+  const vis={};(d.visibility||[]).forEach(v=>{(vis[v.destination_id]=vis[v.destination_id]||{})[v.product_id]=v.allow!==false});
+  const visCats={};(d.visibility_categories||[]).forEach(c=>{(visCats[c.destination_id]=visCats[c.destination_id]||[]).push(c.category)});
   return{
     products:(d.products||[]).map(p=>({id:p.id,code:p.code,name:p.name,cat:p.category,unit:p.unit,icon:p.icon||guessIcon(p.name,p.unit),img:imgUrl(p.image),active:true})),
-    dests:(d.destinations||[]).map(x=>({id:x.id,kind:x.kind,num:x.num,name:x.name})).sort(byDest),
-    recs,
+    dests:(d.destinations||[]).map(x=>({id:x.id,kind:x.kind,num:x.num,name:x.name,restricted:!!x.restricted})).sort(byDest),
+    recs,vis,visCats,
     reminders:(d.reminders||[]).map(r=>({id:r.id,text:r.message,days:r.days,times:r.times||[],active:true}))
   };
+}
+
+/* Cantidades: admiten decimales (2,5) con coma o punto, hasta 2 decimales. */
+const roundQty=n=>Math.round(n*100)/100;
+const parseQty=v=>{const x=parseFloat(String(v==null?'':v).trim().replace(',','.'));return isFinite(x)&&x>0?Math.min(99999,roundQty(x)):0};
+const fmtQty=n=>String(roundQty(Number(n)||0)).replace('.',',');
+const qtyInput=(attr,v,label)=>`<input class="qin" type="text" inputmode="decimal" autocomplete="off" value="${fmtQty(v)}" ${attr} aria-label="${label}">`;
+/* Visibilidad por reglas: categorías permitidas + excepciones producto por producto.
+   Un producto se ve si tiene excepción y esta lo permite, o si no tiene excepción y su categoría está permitida. */
+const visRule=(cats,ov,p)=>(p.id in ov)?ov[p.id]:cats.includes(p.cat);
+function visibleProducts(){
+  const all=phone.catalog.products.filter(p=>p.active);
+  const d=phone.session&&phone.session.role==='user'?myDest():null;
+  if(!d||!d.restricted)return all;
+  const cats=phone.catalog.visCats[d.id]||[],ov=phone.catalog.vis[d.id]||{},sug=phone.catalog.recs[d.id]||{};
+  return all.filter(p=>(p.id in sug)||visRule(cats,ov,p));
+}
+const visCount=id=>{const d=D.dests.find(x=>x.id===id);if(!d||!d.restricted)return 0;const cats=D.visCats[id]||[],ov=D.vis[id]||{};return D.products.filter(p=>p.active&&visRule(cats,ov,p)).length};
+const VIS_MAX=200;
+function visOpen(id){
+  const d=D.dests.find(x=>x.id===id);if(!d)return;
+  sh={type:'vis',dest:id,mode:d.restricted?'some':'all',cats:[...(D.visCats[id]||[])],ov:{...(D.vis[id]||{})},q:'',cat:'',apply:[]};
+  renderPhone();
+}
+const visOn=p=>visRule(sh.cats,sh.ov,p);
+function visSetOne(p,val){if(val===sh.cats.includes(p.cat))delete sh.ov[p.id];else sh.ov[p.id]=val}
+const visTotal=()=>D.products.filter(p=>p.active&&visOn(p)).length;
+function visCatList(){
+  const m={};
+  D.products.filter(p=>p.active).forEach(p=>{const c=m[p.cat]||(m[p.cat]={cat:p.cat,total:0,on:0});c.total++;if(visOn(p))c.on++});
+  return Object.values(m).sort((a,b)=>a.cat.localeCompare(b.cat,'es'));
+}
+function visCatsHTML(){
+  const l=visCatList();
+  if(!l.length)return '<div class="empty" style="margin:12px"><b>Sin categorías</b>Primero crea productos.</div>';
+  return l.map(c=>{
+    const st=c.on===c.total?'all':c.on===0?'none':'some';
+    return `<div class="crow ${st} ${sh.cat===c.cat?'f':''}" data-act="viscat" data-c="${esc(c.cat)}" role="button" tabindex="0" aria-pressed="${st==='all'}"><span class="chk2" aria-hidden="true">${st==='all'?'✓':st==='some'?'−':''}</span><span class="cn">${esc(c.cat)}</span><span class="cc">${c.on} de ${c.total}</span><button class="lnk" data-act="viscatf" data-c="${esc(c.cat)}">${sh.cat===c.cat?'Quitar filtro':'Ver'}</button></div>`;
+  }).join('');
+}
+function visAvail(){
+  const q=(sh.q||'').trim().toLowerCase();
+  return D.products.filter(p=>p.active&&(!sh.cat||p.cat===sh.cat)&&(!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)))
+    .sort((x,y)=>x.cat.localeCompare(y.cat,'es')||x.name.localeCompare(y.name,'es'));
+}
+function visListHTML(){
+  const list=visAvail();
+  if(!list.length)return '<div class="empty" style="margin:16px 0"><b>Sin resultados</b>Prueba con otro nombre, código o categoría.</div>';
+  return list.slice(0,VIS_MAX).map(p=>{const on=visOn(p);return `<div class="prow ${on?'on':''}" role="button" tabindex="0" data-act="visp" data-id="${p.id}" aria-pressed="${on}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.cat)}</div></div><span class="chk2" aria-hidden="true">${on?'✓':''}</span></div>`}).join('')
+    +(list.length>VIS_MAX?`<p class="sub2" style="margin:8px 0">Se muestran ${VIS_MAX} de ${list.length}. Usa una categoría o el buscador para ver el resto.</p>`:'');
+}
+const visLabel=()=>sh.mode==='all'?'Guardar':`Guardar (${visTotal()} visibles)`;
+function visApplyHTML(){
+  const others=D.dests.filter(x=>x.id!==sh.dest);
+  if(!others.length)return '';
+  const has=k=>others.filter(x=>x.kind===k);
+  const chip=(act,data,label,on)=>`<button class="${on?'on':''}" data-act="${act}" ${data} aria-pressed="${on}">${esc(label)}</button>`;
+  return (has('nucleo').length>1?chip('visapplyk','data-k="nucleo"','Todos los núcleos',has('nucleo').every(x=>sh.apply.includes(x.id))):'')
+    +(has('area').length>1?chip('visapplyk','data-k="area"','Todas las áreas',has('area').every(x=>sh.apply.includes(x.id))):'')
+    +others.map(x=>chip('visapply','data-d="'+x.id+'"',dLabel(x),sh.apply.includes(x.id))).join('');
+}
+function visSync(){
+  const set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h};
+  set('visCats',visCatsHTML());
+  set('visApply',visApplyHTML());
+  const b=document.getElementById('visBtn');if(b)b.textContent=visLabel();
+  const c=document.getElementById('visCount');if(c)c.textContent=visTotal()+' producto'+(visTotal()===1?'':'s')+' visible'+(visTotal()===1?'':'s');
+}
+function visRefreshList(){const e=document.getElementById('visList');if(e)e.innerHTML=visListHTML();visSync()}
+function visSave(){
+  const d=D.dests.find(x=>x.id===sh.dest);if(!d)return;
+  if(sh.mode==='some'&&visTotal()===0)return sErr('No hay ningún producto visible. Marca una categoría o deja "Todo el inventario".');
+  const targets=[d.id,...sh.apply.filter(x=>x!==d.id&&D.dests.some(y=>y.id===x))];
+  targets.forEach(id=>{const t=D.dests.find(x=>x.id===id);t.restricted=sh.mode==='some';D.visCats[id]=t.restricted?[...sh.cats]:[];D.vis[id]=t.restricted?{...sh.ov}:{}});
+  sh=null;toast(targets.length>1?`Visibilidad guardada en ${targets.length} destinos. Publica la versión para aplicarla.`:'Visibilidad guardada. Publica la versión para aplicarla.');renderPhone();scheduleDiff();
 }
 
 const isDirty=()=>A.dirty;
@@ -391,15 +491,19 @@ function totals(){const o=order();let items=0,units=0;activeP().forEach(p=>{cons
 
 /* ---------- Guardado automático del borrador (almacenista) ---------- */
 const dbProduct=p=>({id:p.id,farm_id:A.farm,code:p.code,name:p.name,category:p.cat,unit:p.unit,image_path:p.imgPath||null,icon:p.icon||'box',active:!!p.active});
-const dbDest=d=>({id:d.id,farm_id:A.farm,kind:d.kind,num:d.kind==='nucleo'?d.num:null,name:d.kind==='area'?d.name:null});
+const dbDest=d=>({id:d.id,farm_id:A.farm,kind:d.kind,num:d.kind==='nucleo'?d.num:null,name:d.kind==='area'?d.name:null,restricted:!!d.restricted});
 const dbRem=r=>({id:r.id,farm_id:A.farm,message:r.text,days:[...r.days],times:r.times.map(t=>t+':00'),active:!!r.active});
 function normD(d){
-  const m={products:{},dests:{},sugs:{},rems:{}};
+  const m={products:{},dests:{},sugs:{},rems:{},vis:{},viscats:{}};
   d.products.forEach(p=>{m.products[p.id]=dbProduct(p)});
   d.dests.forEach(x=>{m.dests[x.id]=dbDest(x)});
   Object.entries(d.recs).forEach(([did,r])=>Object.entries(r).forEach(([pid,q])=>{
     if(q>0&&m.products[pid]&&m.dests[did])m.sugs[did+'|'+pid]={farm_id:A.farm,destination_id:did,product_id:pid,qty:q};
   }));
+  d.dests.filter(x=>x.restricted).forEach(x=>{
+    Object.entries(d.vis[x.id]||{}).forEach(([pid,al])=>{if(m.products[pid])m.vis[x.id+'|'+pid]={farm_id:A.farm,destination_id:x.id,product_id:pid,allow:!!al}});
+    (d.visCats[x.id]||[]).forEach(c=>{m.viscats[x.id+'|'+c]={farm_id:A.farm,destination_id:x.id,category:c}});
+  });
   d.reminders.forEach(x=>{m.rems[x.id]=dbRem(x)});
   return m;
 }
@@ -424,11 +528,20 @@ async function doPersist(){
     Object.keys(old.sugs).filter(k=>!cur.sugs[k]&&cur.dests[old.sugs[k].destination_id]&&cur.products[old.sugs[k].product_id])
       .forEach(k=>{const s=old.sugs[k];(sugDel[s.destination_id]=sugDel[s.destination_id]||[]).push(s.product_id)});
     for(const [d,pids] of Object.entries(sugDel))for(const c of chunk(pids,80))await run(sbAdmin.from('suggestions').delete().eq('destination_id',d).in('product_id',c));
+    const visDel={};
+    Object.keys(old.vis).filter(k=>!cur.vis[k]&&cur.dests[old.vis[k].destination_id]&&cur.products[old.vis[k].product_id])
+      .forEach(k=>{const v=old.vis[k];(visDel[v.destination_id]=visDel[v.destination_id]||[]).push(v.product_id)});
+    for(const [d,pids] of Object.entries(visDel))for(const c of chunk(pids,80))await run(sbAdmin.from('visibility').delete().eq('destination_id',d).in('product_id',c));
+    const catDel={};
+    Object.keys(old.viscats).filter(k=>!cur.viscats[k]&&cur.dests[old.viscats[k].destination_id]).forEach(k=>{const c=old.viscats[k];(catDel[c.destination_id]=catDel[c.destination_id]||[]).push(c.category)});
+    for(const [d,cs] of Object.entries(catDel))for(const c of chunk(cs,40))await run(sbAdmin.from('visibility_categories').delete().eq('destination_id',d).in('category',c));
     for(const [t,k] of [['reminders','rems'],['products','products'],['destinations','dests']])
       for(const c of chunk(delIds(k),80))await run(sbAdmin.from(t).delete().in('id',c));
     for(const [t,rows,opt] of [
       ['destinations',upRows('dests')],['products',upRows('products')],
       ['suggestions',Object.entries(cur.sugs).filter(([k,r])=>!old.sugs[k]||ch(r,old.sugs[k])).map(x=>x[1]),{onConflict:'destination_id,product_id'}],
+      ['visibility',Object.entries(cur.vis).filter(([k,r])=>!old.vis[k]||ch(r,old.vis[k])).map(x=>x[1]),{onConflict:'destination_id,product_id'}],
+      ['visibility_categories',Object.entries(cur.viscats).filter(([k])=>!old.viscats[k]).map(x=>x[1]),{onConflict:'destination_id,category'}],
       ['reminders',upRows('rems')]])
       for(const c of chunk(rows,200))await run(sbAdmin.from(t).upsert(c,opt));
     A.shadow=cur;A.shadowJson=JSON.stringify(cur);
@@ -454,11 +567,22 @@ function setDirty(r){
   else{A.dirty=!!r.data;A.dirtyNote=''}
 }
 async function refreshDirty(){setDirty(await sbAdmin.rpc('draft_dirty'));updatePubRow()}
+/* Supabase entrega como máximo 1000 filas por consulta: se pide por páginas para no perder productos. */
+async function fetchAll(t,orders){
+  const out=[];
+  for(let from=0;;from+=1000){
+    let q=sbAdmin.from(t).select('*');
+    (orders||['id']).forEach(o=>{q=q.order(o)});
+    const r=await q.range(from,from+999);
+    if(r.error)throw r.error;
+    out.push(...r.data);
+    if(r.data.length<1000)break;
+  }
+  return out;
+}
 async function loadDraft(){
-  const q=t=>sbAdmin.from(t).select('*').range(0,4999);
-  const [p,d,s,r]=await Promise.all([q('products').order('name'),q('destinations'),q('suggestions'),q('reminders')]);
-  for(const x of [p,d,s,r])if(x.error)throw x.error;
-  D=draftFromDb(p.data,d.data,s.data,r.data);
+  const [p,d,sg,r,v,c]=await Promise.all([fetchAll('products'),fetchAll('destinations'),fetchAll('suggestions',['destination_id','product_id']),fetchAll('reminders'),fetchAll('visibility',['destination_id','product_id']),fetchAll('visibility_categories',['destination_id','category'])]);
+  D=draftFromDb(p,d,sg,r,v,c);
   A.shadow=normD(D);A.shadowJson=JSON.stringify(A.shadow);
   if(!D.dests.find(x=>x.id===adm.recDest))adm.recDest=D.dests[0]?D.dests[0].id:null;
 }
@@ -558,7 +682,7 @@ function buildOccurrences(rems){
 }
 function remStatusText(){
   const r=phone.rem||{};
-  if(!NATIVE)return 'Esta es la versión web: los avisos suenan en la app instalada (APK).';
+  if(!NATIVE)return IOS?'En iPhone no suenan avisos con la app cerrada: si alguno se pierde, lo verás aquí al abrir la app.':'Esta es la versión web: los avisos suenan en la app instalada (APK).';
   if(r.state==='ok')return r.exact!=='granted'?'Avisos programados, pero falta permitir "Alarmas y recordatorios" para que suenen a la hora exacta.':`Avisos activados: ${r.count} programados en este celular.`;
   if(r.state==='denied')return 'Las notificaciones están bloqueadas. Actívalas en Ajustes, Apps, Pedidos de insumos, Notificaciones.';
   if(r.state==='error')return 'No se pudieron programar los avisos: '+(r.msg||'error desconocido');
@@ -662,6 +786,7 @@ async function enterCode(){
     toast('Granja vinculada: '+phone.farmName);renderPhone(true);
   }catch(e){err('No se pudo conectar. Revisa tu internet e inténtalo de nuevo.')}
 }
+const iosHint=()=>(IOS&&!STANDALONE&&!NATIVE)?'<div class="ioshint"><b>Instálala en tu iPhone</b>Abre esta página en Safari, toca el botón Compartir y elige "Añadir a pantalla de inicio".</div>':'';
 const nameOk=()=>!!phone.whoLocked&&String(phone.who||'').trim().length>=2;
 /* El nombre se registra UNA sola vez (lo guarda el servidor); el área sí puede cambiar. */
 function registerDevice(){
@@ -783,7 +908,7 @@ function codeHTML(){
   return `<div class="login"><div class="lg-top">${netChip()}</div>
   <div class="lg-mid"><div class="mark big" aria-hidden="true"></div><h1>Pedidos de insumos</h1><p>Escribe el código de tu granja para empezar.</p>
    <div style="width:100%"><input id="fcode" class="codein" placeholder="CAT1-0000" autocomplete="off" autocapitalize="characters" aria-label="Código de granja"><p class="err" id="fErr" style="color:#FFD2C9;margin:10px 0 0"></p></div></div>
-  <div class="lg-bot"><button class="btn lt block" data-act="ccode">Continuar</button></div></div>`;
+  <div class="lg-bot">${iosHint()}<button class="btn lt block" data-act="ccode">Continuar</button></div></div>`;
 }
 const pwField=()=>`<label class="fld" style="margin:0">Contraseña
     <div class="pre"><input id="pw" type="password" autocomplete="off" style="border-radius:10px 0 0 10px;margin-top:0;flex:1;min-width:0;border:1.5px solid var(--line);padding:10px 12px;border-right:0"><button class="lnk" data-act="pwshow" style="padding:0 14px;border:1.5px solid var(--line);border-radius:0 10px 10px 0;background:#fff">Mostrar</button></div></label>`;
@@ -800,16 +925,16 @@ function adminLoginHTML(){
 
 function invListHTML(){
   const o=order();const q=phone.q.trim().toLowerCase();
-  const list=activeP().filter(p=>(phone.cat==='Todos'||p.cat===phone.cat)&&(!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)));
+  const list=visibleProducts().filter(p=>(phone.cat==='Todos'||p.cat===phone.cat)&&(!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)));
   if(!list.length)return '<div class="empty"><b>Sin resultados</b>Prueba con otro nombre o código.</div>';
-  return list.map(p=>{
+  return list.slice(0,phone.lim).map(p=>{
     const n=o[p.id]||0;
-    const ctl=`<div class="step ${n?'':'zero'}" data-act="noop"><button data-act="dec" data-id="${p.id}" aria-label="Quitar uno de ${esc(p.name)}">−</button><input class="qin" type="number" inputmode="numeric" min="0" max="99999" value="${n}" data-qid="${p.id}" data-act="noop" aria-label="Cantidad de ${esc(p.name)}"><button data-act="add" data-id="${p.id}" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>`;
+    const ctl=`<div class="step ${n?'':'zero'}" data-act="noop"><button data-act="dec" data-id="${p.id}" aria-label="Quitar uno de ${esc(p.name)}">−</button>${qtyInput('data-qid="'+p.id+'" data-act="noop"',n,'Cantidad de '+esc(p.name))}<button data-act="add" data-id="${p.id}" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>`;
     return `<div class="row ${n?'sel':''}" data-act="add" data-id="${p.id}" role="button" tabindex="0" aria-label="Agregar ${esc(p.name)}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div></div>${ctl}</div>`;
-  }).join('');
+  }).join('')+(list.length>phone.lim?`<div style="text-align:center;margin:6px 0 14px"><button class="btn sec" data-act="more">Mostrar más (${list.length-phone.lim} restantes)</button></div>`:'');
 }
 function tabInv(){
-  const cats=['Todos',...new Set(activeP().map(p=>p.cat))];
+  const cats=['Todos',...new Set(visibleProducts().map(p=>p.cat))];
   return remCard()+`<div class="search"><input id="q" type="search" placeholder="Buscar por nombre o código" value="${esc(phone.q)}" aria-label="Buscar producto"></div>
   <div class="chips">${cats.map(c=>`<button class="${phone.cat===c?'on':''}" data-act="cat" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
   <div id="invList">${invListHTML()}</div>`;
@@ -817,13 +942,14 @@ function tabInv(){
 function tabOrder(){
   const t=totals();const o=order();
   if(!t.items)return `<div class="empty"><b>Aún no hay productos en el pedido</b>Toca un producto en el inventario para agregarlo.<br><br><button class="btn pri" data-act="tab" data-t="inv">Ir al inventario</button></div>`;
-  const rows=activeP().filter(p=>o[p.id]>0).map(p=>`<div class="row static">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div></div><div class="step" data-act="noop"><button data-act="dec" data-id="${p.id}" aria-label="Quitar uno">−</button><input class="qin" type="number" inputmode="numeric" min="0" max="99999" value="${o[p.id]}" data-qid="${p.id}" data-act="noop" aria-label="Cantidad de ${esc(p.name)}"><button data-act="add" data-id="${p.id}" aria-label="Agregar uno">+</button></div></div>`).join('');
-  return `<div class="sum"><div class="big">${t.units} unidades</div><small>${t.items} producto${t.items>1?'s':''} para ${esc(dLabel(myDest()))}</small>
+  const rows=activeP().filter(p=>o[p.id]>0).map(p=>`<div class="row static">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div></div><div class="step" data-act="noop"><button data-act="dec" data-id="${p.id}" aria-label="Quitar uno">−</button>${qtyInput('data-qid="'+p.id+'" data-act="noop"',o[p.id],'Cantidad de '+esc(p.name))}<button data-act="add" data-id="${p.id}" aria-label="Agregar uno">+</button></div></div>`).join('');
+  return `<div class="sum"><div class="big">${t.items} producto${t.items>1?'s':''}</div><small>para ${esc(dLabel(myDest()))}. Puedes escribir cantidades con decimales, por ejemplo 2,5.</small>
   <textarea id="notes" placeholder="Observaciones para el almacén (opcional)" aria-label="Observaciones">${esc(phone.notes[destId()]||'')}</textarea></div>
   <div style="padding:0 14px"><button class="btn pri block" data-act="wa">Enviar por WhatsApp</button><button class="btn sec block" data-act="copy">Copiar pedido</button></div>
   <div class="sec-t" style="margin-top:12px">Productos del pedido</div>${rows}
   <div style="text-align:center"><button class="btn lnk" data-act="clear">Vaciar pedido</button></div>`;
 }
+
 function tabRecs(){
   const r=phone.catalog.recs[destId()]||{};const o=order();
   const items=activeP().filter(p=>r[p.id]>0);
@@ -831,7 +957,7 @@ function tabRecs(){
   const all=items.every(p=>(o[p.id]||0)>=r[p.id]);
   return `<div class="sec-t">Lo que normalmente consume ${esc(dLabel(myDest()))} cada semana.</div>
   <div style="padding:0 14px 10px"><button class="btn pri block" data-act="recall" ${all?'disabled':''}>${all?'Todo está en el pedido':'Agregar todo al pedido'}</button></div>
-  ${items.map(p=>{const done=(o[p.id]||0)>=r[p.id];return `<div class="row static">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>Sugerido</b>${r[p.id]} ${esc(p.unit.toLowerCase())}</div></div><button class="recbtn ${done?'done':''}" data-act="recadd" data-id="${p.id}" ${done?'disabled':''}>${done?'En el pedido':'Agregar'}</button></div>`}).join('')}`;
+  ${items.map(p=>{const done=(o[p.id]||0)>=r[p.id];return `<div class="row static">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>Sugerido</b>${fmtQty(r[p.id])} ${esc(p.unit.toLowerCase())}</div></div><button class="recbtn ${done?'done':''}" data-act="recadd" data-id="${p.id}" ${done?'disabled':''}>${done?'En el pedido':'Agregar'}</button></div>`}).join('')}`;
 }
 function userHTML(){
   const t=totals();const pending=false;
@@ -841,14 +967,14 @@ function userHTML(){
    <div class="p-sub"><span>${weekLabel}${phone.who?', '+esc(phone.who):''}</span><button class="ghost" data-act="logout">Salir</button></div>
    ${pending?'<div class="banner">Hay un catálogo nuevo. Se descargará cuando tengas internet. Puedes seguir pidiendo.</div>':''}</div>
   <div class="p-body">${body}</div>
-  ${phone.tab==='inv'&&t.units?`<button class="fab" data-act="tab" data-t="order"><span>Ver pedido</span><span>${t.units} unidad${t.units>1?'es':''}</span></button>`:''}
-  <nav class="p-nav">${nav.map(([k,l])=>`<button class="${phone.tab===k?'on':''}" data-act="tab" data-t="${k}">${ico(k)}${l}${k==='order'&&t.units?`<span class="badge">${t.units}</span>`:''}</button>`).join('')}</nav>`;
+  ${phone.tab==='inv'&&t.items?`<button class="fab" data-act="tab" data-t="order"><span>Ver pedido</span><span>${t.items} producto${t.items>1?'s':''}</span></button>`:''}
+  <nav class="p-nav">${nav.map(([k,l])=>`<button class="${phone.tab===k?'on':''}" data-act="tab" data-t="${k}">${ico(k)}${l}${k==='order'&&t.items?`<span class="badge">${t.items}</span>`:''}</button>`).join('')}</nav>`;
 }
 function orderText(){
   const o=order();
-  const lines=activeP().filter(p=>o[p.id]>0).map(p=>`• ${p.code} ${p.name} x${o[p.id]} (${p.unit})`);
+  const lines=activeP().filter(p=>o[p.id]>0).map(p=>`• ${p.code} ${p.name} x${fmtQty(o[p.id])} (${p.unit})`);
   const t=totals();const nt=(phone.notes[destId()]||'').trim();
-  return `*Pedido de insumos - ${dLabel(myDest())}*\n${weekLabel}`+(phone.who?`\nSolicitado por: ${phone.who}`:'')+`\n\n${lines.join('\n')}\n\nTotal: ${t.units} unidades (${t.items} productos)`+(nt?`\nObservaciones: ${nt}`:'');
+  return `*Pedido de insumos - ${dLabel(myDest())}*\n${weekLabel}`+(phone.who?`\nSolicitado por: ${phone.who}`:'')+`\n\n${lines.join('\n')}\n\nTotal: ${t.items} producto${t.items===1?'':'s'}`+(nt?`\nObservaciones: ${nt}`:'');
 }
 function setQty(id,n){const o=order();if(n<=0)delete o[id];else o[id]=n;LS.set('orders',phone.orders)}
 
@@ -856,9 +982,9 @@ function prodRowsHTML(){
   const q=adm.q.trim().toLowerCase();
   const list=[...D.products].sort((x,y)=>x.cat.localeCompare(y.cat,'es')||x.name.localeCompare(y.name,'es')).filter(p=>(adm.cat==='Todos'||p.cat===adm.cat)&&(!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)));
   if(!list.length)return '<div class="empty"><b>No hay productos</b>Crea uno con "Nuevo producto" o importa tu lista desde Excel.</div>';
-  return list.map(p=>`<div class="row static"><div class="rowmain" data-act="pedit" data-id="${p.id}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div>
+  return list.slice(0,adm.lim).map(p=>`<div class="row static"><div class="rowmain" data-act="pedit" data-id="${p.id}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div>
    <div class="meta" style="margin-top:7px"><span class="tagc">${esc(p.cat)}</span><button class="sw ${p.active?'on':''}" role="switch" aria-checked="${p.active}" aria-label="Visible para los usuarios" data-act="ptoggle" data-id="${p.id}"></button>${p.active?'Activo':'Oculto'}</div></div></div>
-   <button class="ib" data-act="pedit" data-id="${p.id}" aria-label="Editar ${esc(p.name)}">${ico('pencil')}</button><button class="ib red" data-act="pdel" data-id="${p.id}" aria-label="Eliminar ${esc(p.name)}">${ico('trash')}</button></div>`).join('');
+   <button class="ib" data-act="pedit" data-id="${p.id}" aria-label="Editar ${esc(p.name)}">${ico('pencil')}</button><button class="ib red" data-act="pdel" data-id="${p.id}" aria-label="Eliminar ${esc(p.name)}">${ico('trash')}</button></div>`).join('')+(list.length>adm.lim?`<div style="text-align:center;margin:6px 0 14px"><button class="btn sec" data-act="amore">Mostrar más (${list.length-adm.lim} restantes)</button></div>`:'');
 }
 function aProd(){
   const cats=['Todos',...new Set(D.products.map(p=>p.cat))];
@@ -872,7 +998,7 @@ function aProd(){
 function aDest(){
   return `<div class="sec-t">Núcleos y áreas que pueden hacer pedidos. El nombre del núcleo siempre empieza con "Núcleo" y tú escribes el número.</div>
   <div class="btnrow"><button class="btn pri" data-act="dnew" data-k="nucleo">${ico('plus')}Agregar núcleo</button><button class="btn sec" data-act="dnew" data-k="area">${ico('plus')}Agregar área</button></div>
-  ${D.dests.map(d=>`<div class="row static">${destTile(d)}<div class="info"><div class="nm">${esc(dLabel(d))}</div><div class="meta">${d.kind==='nucleo'?'Núcleo':'Área'}</div></div>
+  ${D.dests.map(d=>`<div class="row static">${destTile(d)}<div class="info"><div class="nm">${esc(dLabel(d))}</div><div class="meta">${d.kind==='nucleo'?'Núcleo':'Área'}</div><div class="meta" style="margin-top:4px"><b>${d.restricted?'Ve '+visCount(d.id)+' producto'+(visCount(d.id)===1?'':'s'):'Ve todo el inventario'}</b></div><button class="lnk" data-act="visopen" data-d="${d.id}">Qué productos ve</button></div>
    <button class="ib" data-act="dedit" data-d="${d.id}" aria-label="Editar ${esc(dLabel(d))}">${ico('pencil')}</button><button class="ib red" data-act="ddel" data-d="${d.id}" aria-label="Eliminar ${esc(dLabel(d))}">${ico('trash')}</button></div>`).join('')}`;
 }
 function aRec(){
@@ -884,7 +1010,7 @@ function aRec(){
   <div class="sec-t">Lo que normalmente consume <b>${esc(dLabel(d))}</b> por semana. Toca el número para escribir la cantidad.</div>
   <div class="btnrow"><button class="btn pri" data-act="recopen">${ico('plus')}Agregar productos</button><button class="btn sec" data-act="reccopy">${ico('copy')}Copiar de otro</button></div>
   ${items.length?items.map(p=>{const v=r[p.id];return `<div class="row static recrow"><div class="rtop">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}${p.active?'':' (oculto)'}</div></div></div>
-   <div class="rctl"><span class="rlbl">Cantidad por semana</span><div class="step"><button data-act="rdec" data-id="${p.id}" aria-label="Quitar uno">−</button><input class="qin" type="number" min="1" max="999" inputmode="numeric" value="${v}" data-rid="${p.id}" aria-label="Cantidad sugerida de ${esc(p.name)}"><button data-act="rinc" data-id="${p.id}" aria-label="Agregar uno">+</button></div>
+   <div class="rctl"><span class="rlbl">Cantidad por semana</span><div class="step"><button data-act="rdec" data-id="${p.id}" aria-label="Quitar uno">−</button>${qtyInput('data-rid="'+p.id+'"',v,'Cantidad sugerida de '+esc(p.name))}<button data-act="rinc" data-id="${p.id}" aria-label="Agregar uno">+</button></div>
    <button class="ib red sm" data-act="rrm" data-id="${p.id}" aria-label="Quitar ${esc(p.name)} de sugeridos">${ico('trash')}</button></div></div>`}).join(''):'<div class="empty"><b>Sin productos sugeridos</b>Usa "Agregar productos" para armar la lista de este núcleo o área.</div>'}`;
 }
 function pwCard(temp){
@@ -964,6 +1090,19 @@ function sheetHTML(){
      <label class="fld chk" style="margin-top:14px"><input type="checkbox" id="rAct" ${sh.active?'checked':''}>Aviso activo</label>
      <p class="err" id="sErr"></p>
      <div class="mact"><button class="btn sec" data-act="sclose">Cancelar</button><button class="btn pri" data-act="rsave">Guardar</button></div></div></div>`;
+  if(sh.type==='vis'){const d=D.dests.find(x=>x.id===sh.dest);const all=sh.mode==='all';return `<div class="sheetbg" data-act="sbg"><div class="sheet"><div class="grab"></div><h2>Qué ve ${esc(dLabel(d))}</h2>
+     <div class="seg2"><button class="${all?'on':''}" data-act="vismode" data-m="all">Todo el inventario</button><button class="${all?'':'on'}" data-act="vismode" data-m="some">Solo lo que elijas</button></div>
+     <div id="visBox" ${all?'hidden':''}>
+      <p class="sub2" style="margin:0 0 8px">Marca categorías completas y quita los productos que no correspondan. Los productos nuevos de una categoría marcada se ven solos.</p>
+      <div id="visCats" class="cats">${visCatsHTML()}</div>
+      <div class="search" style="margin:0 0 6px"><input id="visQ" type="search" placeholder="Buscar por nombre o código" value="${esc(sh.q)}" aria-label="Buscar producto"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap"><span class="sub2" id="visCount" style="margin:0">${visTotal()} producto${visTotal()===1?'':'s'} visible${visTotal()===1?'':'s'}</span><span><button class="lnk" data-act="visall">Marcar los de la lista</button> <button class="lnk" data-act="visnone" style="margin-left:8px">Quitar los de la lista</button></span></div>
+      <div id="visList" style="max-height:230px;overflow-y:auto">${visListHTML()}</div>
+      <p class="sub2" style="margin:10px 0 0">Los productos sugeridos para esta área siempre se muestran.</p>
+     </div>
+     ${D.dests.length>1?`<div class="fld" style="margin:14px 0 6px">Aplicar lo mismo a otros destinos (opcional)</div><div class="chips" id="visApply" style="flex-wrap:wrap;padding:0 0 6px">${visApplyHTML()}</div>`:''}
+     <p class="err" id="sErr"></p>
+     <div class="mact"><button class="btn sec" data-act="sclose">Cancelar</button><button class="btn pri" id="visBtn" data-act="vissave">${visLabel()}</button></div></div></div>`}
   if(sh.type==='help')return `<div class="sheetbg" data-act="sbg"><div class="sheet"><div class="grab"></div><h2>Si el aviso no suena</h2>
      <p class="sub2">Algunos celulares cierran las apps en segundo plano y cancelan sus avisos. Revisa esto una sola vez:</p>
      <ol style="padding-left:20px;margin:0 0 14px;font-size:14.5px;line-height:1.55">
@@ -1033,7 +1172,7 @@ function saveDest(){
   }
   const val=sh.kind==='nucleo'?{kind:'nucleo',num}:{kind:'area',name};
   if(sh.id){const d=D.dests.find(x=>x.id===sh.id);delete d.num;delete d.name;Object.assign(d,val)}
-  else D.dests.push({id:uid(),...val});
+  else D.dests.push({id:uid(),...val,restricted:false});
   sh=null;toast('Guardado. Publica la versión para que los usuarios lo vean.');renderPhone();
 }
 function askDelDest(id){
@@ -1123,7 +1262,7 @@ function pickAvail(){
 function pickListHTML(){
   const list=pickAvail();
   if(!list.length)return `<div class="empty" style="margin:16px 0"><b>${(sh.q||'').trim()?'Sin resultados':'No hay más productos'}</b>${(sh.q||'').trim()?'Prueba con otro nombre o código.':'Todos los productos activos ya están en la lista.'}</div>`;
-  return list.map(p=>{const on=sh.sel.includes(p.id);return `<div class="prow ${on?'on':''}" role="button" tabindex="0" data-act="pickp" data-id="${p.id}" aria-pressed="${on}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div></div><span class="chk2" aria-hidden="true">${on?'✓':''}</span></div>`}).join('');
+  return list.slice(0,200).map(p=>{const on=sh.sel.includes(p.id);return `<div class="prow ${on?'on':''}" role="button" tabindex="0" data-act="pickp" data-id="${p.id}" aria-pressed="${on}">${thumb(p)}<div class="info"><div class="nm">${esc(p.name)}</div><div class="meta"><b>${esc(p.code)}</b>${esc(p.unit)}</div></div><span class="chk2" aria-hidden="true">${on?'✓':''}</span></div>`}).join('')+(list.length>200?`<p class="sub2" style="margin:8px 0">Se muestran 200 de ${list.length}. Usa el buscador para ver el resto.</p>`:'');
 }
 const pickLabel=()=>sh.sel.length?`Agregar ${sh.sel.length} producto${sh.sel.length>1?'s':''}`:'Agregar';
 function pickRefresh(){$('#pickList').innerHTML=pickListHTML();const b=$('#pickBtn');b.textContent=pickLabel();b.disabled=!sh.sel.length}
@@ -1162,10 +1301,10 @@ document.addEventListener('click',e=>{
     case 'pwshow':{const i=$('#pw');const show=i.type==='password';i.type=show?'text':'password';b.textContent=show?'Ocultar':'Mostrar';break}
     case 'logout':doLogout();break;
     /* usuario */
-    case 'add':setQty(id,(order()[id]||0)+1);renderPhone();break;
-    case 'dec':setQty(id,(order()[id]||0)-1);renderPhone();break;
+    case 'add':setQty(id,roundQty((order()[id]||0)+1));renderPhone();break;
+    case 'dec':setQty(id,roundQty((order()[id]||0)-1));renderPhone();break;
     case 'tab':phone.tab=b.dataset.t;renderPhone(true);break;
-    case 'cat':phone.cat=b.dataset.c;renderPhone(true);break;
+    case 'cat':phone.cat=b.dataset.c;phone.lim=150;renderPhone(true);break;
     case 'wa':window.open('https://wa.me/?text='+encodeURIComponent(orderText()),'_blank');break;
     case 'copy':{const t=orderText();(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Pedido copiado. Pégalo en WhatsApp o en un correo.')).catch(()=>toast('No se pudo copiar.'));break}
     case 'clear':phone.orders[destId()]={};renderPhone();break;
@@ -1173,12 +1312,23 @@ document.addEventListener('click',e=>{
     case 'recall':{const r=phone.catalog.recs[destId()]||{};activeP().forEach(p=>{if(r[p.id]>0)setQty(p.id,Math.max(order()[p.id]||0,r[p.id]))});renderPhone();toast('Recomendados agregados al pedido');break}
     /* almacenista */
     case 'atab':adm.tab=b.dataset.t;renderPhone(true);break;
-    case 'acat':adm.cat=b.dataset.c;renderPhone(true);break;
+    case 'acat':adm.cat=b.dataset.c;adm.lim=150;renderPhone(true);break;
     case 'retrysave':persist();break;
     case 'remtest':testReminder();break;
     case 'remask':scheduleReminders(phone.catalog.reminders);break;
     case 'remexact':try{LNP().changeExactNotificationSetting()}catch(e){}break;
     case 'noop':break;
+    case 'visopen':visOpen(b.dataset.d);break;
+    case 'vismode':{sh.mode=b.dataset.m;document.querySelectorAll('[data-act=vismode]').forEach(x=>x.classList.toggle('on',x.dataset.m===sh.mode));const bx=document.getElementById('visBox');if(bx)bx.hidden=sh.mode!=='some';visSync();break}
+    case 'visp':{const p=D.products.find(x=>x.id===id);if(p){const on=!visOn(p);visSetOne(p,on);b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));const ck=b.querySelector('.chk2');if(ck)ck.textContent=on?'✓':'';visSync()}break}
+    case 'viscat':{const c=b.dataset.c;const ps=D.products.filter(p=>p.active&&p.cat===c);const all=ps.every(visOn);ps.forEach(p=>{delete sh.ov[p.id]});if(all)sh.cats=sh.cats.filter(x=>x!==c);else if(!sh.cats.includes(c))sh.cats.push(c);visRefreshList();break}
+    case 'viscatf':{const c=b.dataset.c;sh.cat=sh.cat===c?'':c;visRefreshList();break}
+    case 'visall':case 'visnone':{const on=a==='visall';visAvail().forEach(p=>visSetOne(p,on));visRefreshList();break}
+    case 'visapply':{const d=b.dataset.d,i=sh.apply.indexOf(d);if(i<0)sh.apply.push(d);else sh.apply.splice(i,1);visSync();break}
+    case 'visapplyk':{const ids=D.dests.filter(x=>x.kind===b.dataset.k&&x.id!==sh.dest).map(x=>x.id);const all=ids.every(x=>sh.apply.includes(x));sh.apply=all?sh.apply.filter(x=>!ids.includes(x)):[...new Set([...sh.apply,...ids])];visSync();break}
+    case 'more':phone.lim+=150;renderPhone();break;
+    case 'amore':adm.lim+=150;renderPhone();break;
+    case 'vissave':visSave();break;
     case 'remseen':LS.set('remSeen',Date.now());renderPhone();break;
     case 'remhelp':sh={type:'help'};renderPhone();break;
     case 'publish':publish();break;
@@ -1197,7 +1347,7 @@ document.addEventListener('click',e=>{
     case 'dkind':sh.kind=b.dataset.k;$('#gN').hidden=sh.kind!=='nucleo';$('#gA').hidden=sh.kind!=='area';document.querySelectorAll('[data-act=dkind]').forEach(x=>x.classList.toggle('on',x.dataset.k===sh.kind));break;
     case 'dsave':saveDest();break;
     case 'rdest':adm.recDest=b.dataset.d;renderPhone(true);break;
-    case 'rinc':case 'rdec':{const r=D.recs[adm.recDest]||(D.recs[adm.recDest]={});const v=(r[id]||0)+(a==='rinc'?1:-1);if(v>0)r[id]=v;else delete r[id];renderPhone();break}
+    case 'rinc':case 'rdec':{const r=D.recs[adm.recDest]||(D.recs[adm.recDest]={});const v=roundQty((r[id]||0)+(a==='rinc'?1:-1));if(v>0)r[id]=v;else delete r[id];renderPhone();break}
     case 'spwd':changePw();break;
     /* hojas */
     case 'sclose':sh=null;renderPhone();break;
@@ -1214,19 +1364,20 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
-  if(t.id==='q'){phone.q=t.value;$('#invList').innerHTML=invListHTML()}
+  if(t.id==='q'){phone.q=t.value;phone.lim=150;$('#invList').innerHTML=invListHTML()}
   else if(t.id==='notes'){phone.notes[destId()]=t.value;LS.set('notes',phone.notes)}
   else if(t.id==='who'){phone.whoDraft=t.value}
-  else if(t.id==='aq'){adm.q=t.value;$('#prodRows').innerHTML=prodRowsHTML()}
+  else if(t.id==='aq'){adm.q=t.value;adm.lim=150;$('#prodRows').innerHTML=prodRowsHTML()}
   else if(t.id==='pickQ'){sh.q=t.value;pickRefresh()}
+  else if(t.id==='visQ'){sh.q=t.value;document.getElementById('visList').innerHTML=visListHTML()}
 });
 document.addEventListener('change',e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.qid){
-    const v=Math.max(0,Math.min(99999,parseInt(t.value)||0));setQty(t.dataset.qid,v);renderPhone();return;
+    setQty(t.dataset.qid,parseQty(t.value));renderPhone();return;
   }
   if(t.dataset&&t.dataset.rid){
-    const v=Math.max(0,Math.min(999,parseInt(t.value)||0));const r=D.recs[adm.recDest]||(D.recs[adm.recDest]={});
+    const v=parseQty(t.value);const r=D.recs[adm.recDest]||(D.recs[adm.recDest]={});
     if(v)r[t.dataset.rid]=v;else delete r[t.dataset.rid];renderPhone();scheduleDiff();return;
   }
   if(t.id==='mImg'&&t.files[0]){
@@ -1252,6 +1403,8 @@ document.addEventListener('change',e=>{
   scheduleDiff();
 });
 
+document.getElementById('toast').addEventListener('click',function(){this.hidden=true});
+if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)&&!NATIVE&&location.hostname!=='localhost'){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
 document.addEventListener('focusin',e=>{const t=e.target;if(t.classList&&t.classList.contains('qin'))setTimeout(()=>{try{t.select()}catch(_){}},0)});
 
 renderPhone(true);
