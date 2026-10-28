@@ -244,42 +244,71 @@ body{background:var(--bg);overscroll-behavior:none}
 .remcard .rb button{padding:6px 12px;border-radius:999px;background:var(--g1);color:var(--g8);font-weight:700;font-size:12.5px}
 .fld input{font-size:16px}
 
-/* ===== Vista de escritorio del almacenista (solo pantallas anchas; el celular no cambia) ===== */
+/* ===== Vista de escritorio (solo pantallas anchas; el celular no cambia) ===== */
 @media (min-width:1024px){
-  body.deskadm #app{max-width:none;box-shadow:none}
-  .screen.adm{display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
-  .adm .p-head{grid-column:1/-1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;border-radius:0;padding:14px 32px}
-  .adm .p-top{order:1;flex:0 1 auto;justify-content:flex-start;align-items:center;gap:18px}
-  .adm .p-title{font-size:22px}
-  .adm .pubrow{order:2;margin:0 0 0 auto;gap:14px}
-  .adm .p-sub{order:3;margin:0;gap:16px}
-  .adm .banner#pubErr,.adm .p-head>.banner{order:4;flex:1 1 100%;margin:0}
-  .adm .p-nav{grid-column:1;grid-row:2;flex-direction:column;gap:4px;padding:20px 14px;border-top:0;border-right:1px solid var(--line);overflow-y:auto;align-content:start}
-  .adm .p-nav::before{content:"Gestión";font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);padding:0 14px 8px}
-  .adm .p-nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;border-radius:10px;font-size:14.5px}
-  .adm .p-nav button:hover{background:var(--bg)}
-  .adm .p-nav button.on{background:var(--g1);color:var(--g8);box-shadow:inset 3px 0 0 var(--straw)}
-  .adm .p-nav svg{width:21px;height:21px}
-  .adm .p-body{grid-column:2;grid-row:2;min-height:0;padding:26px 36px 40px!important;display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start}
-  .adm .p-body>*{grid-column:1/-1;margin-left:0;margin-right:0}
-  .adm .p-body>.row,.adm .p-body>.remcard{grid-column:auto;margin:0}
-  .adm .p-body>.sum{max-width:760px}
-  .adm .p-body>.search{max-width:520px}
-  .adm .p-body>.codebox{max-width:760px}
-  .adm .search{margin:0}
-  .adm .chips{flex-wrap:wrap;overflow:visible;padding:0}
-  .adm .btnrow{padding:0;gap:10px}
-  .adm .btnrow .btn{flex:none;padding:11px 20px}
-  .adm .sec-t{margin:0}
-  .adm #prodRows{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start}
-  .adm #prodRows>*{margin:0}
-  .adm .row{margin:0;transition:box-shadow .12s,border-color .12s}
-  .adm .row:hover{border-color:var(--g6);box-shadow:0 6px 18px -10px rgba(20,58,92,.45)}
-  .adm .credit{grid-column:1/-1;grid-row:3;border-top:1px solid var(--line)}
-  .adm .sheetbg{align-items:center;justify-content:center;padding:24px}
-  .adm .sheet{width:100%;max-width:600px;max-height:100%;border-radius:18px;padding:24px 28px 26px}
-  .adm .grab{display:none}
-  body.deskadm #toast{bottom:56px}
+  #app{max-width:none;box-shadow:none}
+  body #toast{bottom:56px}
+  /* Encabezado en barra horizontal (panel del almacenista, usuario, elegir área, clave) */
+  .dsk .p-head,.dskc .p-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;border-radius:0;padding:14px 32px}
+  .dsk .p-top,.dskc .p-top{order:1;flex:0 1 auto;justify-content:flex-start;align-items:center;gap:18px}
+  .dsk .p-title,.dskc .p-title{font-size:22px}
+  .dsk .pubrow{order:2;margin:0 0 0 auto;gap:14px}
+  .dsk .p-sub,.dskc .p-sub{order:3;margin:0 0 0 auto;gap:16px}
+  .dsk .p-head:has(.pubrow) .p-sub{margin-left:0}
+  .dsk .p-head>.banner,.dskc .p-head>.banner{order:4;flex:1 1 100%;margin:0}
+  /* Con menú lateral */
+  .screen.dsk{display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  .dsk .p-head{grid-column:1/-1;grid-row:1}
+  .dsk .p-nav{grid-column:1;grid-row:2;flex-direction:column;gap:4px;padding:20px 14px;border-top:0;border-right:1px solid var(--line);overflow-y:auto;align-content:start}
+  .dsk .p-nav::before{content:"Menú";font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);padding:0 14px 8px}
+  .screen.adm .p-nav::before{content:"Gestión"}
+  .dsk .p-nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;border-radius:10px;font-size:14.5px}
+  .dsk .p-nav button:hover{background:var(--bg)}
+  .dsk .p-nav button.on{background:var(--g1);color:var(--g8);box-shadow:inset 3px 0 0 var(--straw)}
+  .dsk .p-nav svg{width:21px;height:21px}
+  .dsk .badge{position:static;margin-left:auto}
+  .dsk .p-body{grid-column:2;grid-row:2;min-height:0}
+  .dsk .credit{grid-column:1/-1;grid-row:3;border-top:1px solid var(--line)}
+  .dsk .fab{left:auto;right:40px;bottom:60px;width:340px}
+  /* Contenido en cuadrícula */
+  .dsk .p-body,.dskc .p-body{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start;padding:26px 36px 40px!important}
+  .dskc .p-body{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .dsk .p-body>*,.dskc .p-body>*{grid-column:1/-1;margin-left:0;margin-right:0}
+  .dsk .p-body>.row{grid-column:auto;margin:0}
+  .dskc .p-body>.row{grid-column:auto;margin:0}
+  .dsk .p-body>.sum,.dsk .p-body>.remcard,.dsk .p-body>.codebox,.dsk .p-body>.missed{max-width:760px}
+  .dsk .p-body>div[style*="padding:0 14px"]{padding:0!important;max-width:760px}
+  .dsk .p-body>.search{max-width:520px}
+  .dsk .search{margin:0}
+  .dsk .chips{flex-wrap:wrap;overflow:visible;padding:0}
+  .dsk .btnrow{padding:0;gap:10px}
+  .dsk .btnrow .btn{flex:none;padding:11px 20px}
+  .dsk .sec-t,.dskc .sec-t{margin:0}
+  .dsk #prodRows,.dsk #invList{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start}
+  .dsk #prodRows>*,.dsk #invList>*{margin:0}
+  .dsk #prodRows>div[style],.dsk #invList>div[style],.dsk #invList>.empty,.dsk #prodRows>.empty{grid-column:1/-1}
+  .dsk .row,.dskc .row{margin:0;transition:box-shadow .12s,border-color .12s}
+  .dsk .row:hover,.dskc .row:not(.disabled):hover{border-color:var(--g6);box-shadow:0 6px 18px -10px rgba(20,58,92,.45)}
+  /* Elegir núcleo/área y clave del almacenista: contenido centrado */
+  .screen.dskc{display:flex;flex-direction:column}
+  .dskc .p-body{width:100%;max-width:1040px;margin:0 auto}
+  .dskc .grid2{padding:0;gap:12px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .dskc .dbtn{padding:24px 12px;font-size:17px}
+  .dskc .p-body>.sum{max-width:560px;margin:0!important}
+  /* Inicio y código de granja */
+  .dlg .login{align-items:center;justify-content:center;padding:32px;background:radial-gradient(1100px 620px at 18% -8%,#235784 0,var(--g8) 52%,var(--g9) 100%)}
+  .dlg .lg-top{position:absolute;top:22px;right:32px}
+  .dlg .lg-mid{flex:none;width:100%;max-width:520px}
+  .dlg .lg-bot,.dlg .login .ioshint{width:100%;max-width:420px}
+  .dlg .lg-mid h1{font-size:40px}
+  .dlg .lg-mid p{max-width:420px;font-size:17px}
+  .dlg .mark.big{width:78px;height:95px}
+  .dlg .lg-mid>div[style*="width:100%"]{max-width:420px}
+  .dlg .lg-bot{margin-top:34px}
+  /* Ventanas (formularios) centradas */
+  .screen .sheetbg{align-items:center;justify-content:center;padding:24px}
+  .screen .sheet{width:100%;max-width:600px;max-height:100%;border-radius:18px;padding:24px 28px 26px}
+  .screen .grab{display:none}
 }
 </style>
 </head>
@@ -1161,7 +1190,7 @@ function renderPhone(reset){
   if(!phone.session)html=phone.step==='code'?codeHTML():phone.step==='pickDest'?pickHTML():phone.step==='adminLogin'?adminLoginHTML():homeHTML();
   else html=phone.session.role==='admin'?adminHTML():userHTML();
   const dk=!phone.session&&(phone.step==='home'||phone.step==='code');
-  const isAdm=!!(phone.session&&phone.session.role==='admin');scr.classList.toggle('adm',isAdm);document.body.classList.toggle('deskadm',isAdm);
+  const isAdm=!!(phone.session&&phone.session.role==='admin'),hasNav=/class="p-nav"/.test(html),hasHead=/class="p-head"/.test(html);scr.classList.toggle('adm',isAdm);scr.classList.toggle('dsk',hasNav);scr.classList.toggle('dskc',hasHead&&!hasNav);scr.classList.toggle('dlg',!hasHead);
   scr.innerHTML=html+`<div class="credit ${dk?'dk':''}">Desarrollado por analista de sistemas Eber Romero</div>`+(sh?sheetHTML():'');
   const nb=scr.querySelector('.p-body');if(nb)nb.scrollTop=st;
 }
