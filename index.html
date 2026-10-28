@@ -243,6 +243,44 @@ body{background:var(--bg);overscroll-behavior:none}
 .remcard .rb{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .remcard .rb button{padding:6px 12px;border-radius:999px;background:var(--g1);color:var(--g8);font-weight:700;font-size:12.5px}
 .fld input{font-size:16px}
+
+/* ===== Vista de escritorio del almacenista (solo pantallas anchas; el celular no cambia) ===== */
+@media (min-width:1024px){
+  body.deskadm #app{max-width:none;box-shadow:none}
+  .screen.adm{display:grid;grid-template-columns:240px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+  .adm .p-head{grid-column:1/-1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 28px;border-radius:0;padding:14px 32px}
+  .adm .p-top{order:1;flex:0 1 auto;justify-content:flex-start;align-items:center;gap:18px}
+  .adm .p-title{font-size:22px}
+  .adm .pubrow{order:2;margin:0 0 0 auto;gap:14px}
+  .adm .p-sub{order:3;margin:0;gap:16px}
+  .adm .banner#pubErr,.adm .p-head>.banner{order:4;flex:1 1 100%;margin:0}
+  .adm .p-nav{grid-column:1;grid-row:2;flex-direction:column;gap:4px;padding:20px 14px;border-top:0;border-right:1px solid var(--line);overflow-y:auto;align-content:start}
+  .adm .p-nav::before{content:"Gestión";font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);padding:0 14px 8px}
+  .adm .p-nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;border-radius:10px;font-size:14.5px}
+  .adm .p-nav button:hover{background:var(--bg)}
+  .adm .p-nav button.on{background:var(--g1);color:var(--g8);box-shadow:inset 3px 0 0 var(--straw)}
+  .adm .p-nav svg{width:21px;height:21px}
+  .adm .p-body{grid-column:2;grid-row:2;min-height:0;padding:26px 36px 40px!important;display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start}
+  .adm .p-body>*{grid-column:1/-1;margin-left:0;margin-right:0}
+  .adm .p-body>.row,.adm .p-body>.remcard{grid-column:auto;margin:0}
+  .adm .p-body>.sum{max-width:760px}
+  .adm .p-body>.search{max-width:520px}
+  .adm .p-body>.codebox{max-width:760px}
+  .adm .search{margin:0}
+  .adm .chips{flex-wrap:wrap;overflow:visible;padding:0}
+  .adm .btnrow{padding:0;gap:10px}
+  .adm .btnrow .btn{flex:none;padding:11px 20px}
+  .adm .sec-t{margin:0}
+  .adm #prodRows{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:10px 16px;align-content:start}
+  .adm #prodRows>*{margin:0}
+  .adm .row{margin:0;transition:box-shadow .12s,border-color .12s}
+  .adm .row:hover{border-color:var(--g6);box-shadow:0 6px 18px -10px rgba(20,58,92,.45)}
+  .adm .credit{grid-column:1/-1;grid-row:3;border-top:1px solid var(--line)}
+  .adm .sheetbg{align-items:center;justify-content:center;padding:24px}
+  .adm .sheet{width:100%;max-width:600px;max-height:100%;border-radius:18px;padding:24px 28px 26px}
+  .adm .grab{display:none}
+  body.deskadm #toast{bottom:56px}
+}
 </style>
 </head>
 <body>
@@ -1123,6 +1161,7 @@ function renderPhone(reset){
   if(!phone.session)html=phone.step==='code'?codeHTML():phone.step==='pickDest'?pickHTML():phone.step==='adminLogin'?adminLoginHTML():homeHTML();
   else html=phone.session.role==='admin'?adminHTML():userHTML();
   const dk=!phone.session&&(phone.step==='home'||phone.step==='code');
+  const isAdm=!!(phone.session&&phone.session.role==='admin');scr.classList.toggle('adm',isAdm);document.body.classList.toggle('deskadm',isAdm);
   scr.innerHTML=html+`<div class="credit ${dk?'dk':''}">Desarrollado por analista de sistemas Eber Romero</div>`+(sh?sheetHTML():'');
   const nb=scr.querySelector('.p-body');if(nb)nb.scrollTop=st;
 }
